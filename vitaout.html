@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PS Vita Web Capture Receiver</title>
+    <title>PS Vita Output (RS utility)</title>
     <style>
         :root {
-            --accent-color: #00f0ff;
-            --bg-color: #000627;
-            --panel-bg: #000000;
-            --text-color: #e2e2e9;
+            --accent-color: #ff0000;
+            --bg-color: #ffffff;
+            --panel-bg: #ffffff;
+            --text-color: #000000;
+            --card-radius: 12px;
         }
 
         body {
@@ -17,7 +18,7 @@
             padding: 10px;
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -28,14 +29,13 @@
 
         .control-panel {
             background-color: var(--panel-bg);
-            padding: 12px 20px;
-            border-radius: 8px;
-            margin-bottom: 15px;
+            padding: 14px;
+            border-radius: var(--card-radius);
+            margin-bottom: 16px;
             display: flex;
             gap: 12px;
             align-items: center;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             z-index: 10;
         }
 
@@ -44,29 +44,43 @@
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            color: #333;
         }
 
-        select, button {
-            background-color: #222230;
-            color: var(--text-color);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 8px 12px;
-            border-radius: 4px;
+        select {
+            background: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-weight: 600;
             font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        select:hover {
+            transform: scale(1.05);
+        }
+
+        select:focus {
+            outline: none;
+        }
+
+        button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: var(--accent-color);
+            color: white;
+            font-family: inherit;
+            font-weight: bold;
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        select:focus, button:hover {
-            border-color: var(--accent-color);
-            outline: none;
-            box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
-        }
-
-        button {
-            background-color: var(--accent-color);
-            color: #000;
-            font-weight: bold;
+        button:hover {
+            opacity: 0.9;
         }
 
         button:active {
@@ -76,13 +90,12 @@
         .viewer-container {
             position: relative;
             width: 95vw;
-            max-width: 960px; /* PS Vita native aspect ratio scales nicely here */
+            max-width: 960px; 
             aspect-ratio: 16 / 9;
-            background-color: #000;
-            border-radius: 12px;
+            background-color: #000000;
+            border-radius: var(--card-radius);
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-            border: 2px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -91,8 +104,8 @@
         video {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Keeps the Vita's exact aspect ratio without stretching */
-            background-color: #000;
+            object-fit: contain; 
+            background-color: #000000;
         }
 
         .placeholder-text {
@@ -101,6 +114,45 @@
             color: #666677;
             text-align: center;
             pointer-events: none;
+            z-index: 2;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background-color: rgba(0, 0, 0, 0.65);
+            color: #ffffff;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            transition: all 0.2s ease, opacity 0.2s ease;
+            backdrop-filter: blur(4px);
+            opacity: 1;
+            cursor: pointer;
+        }
+
+        .fullscreen-btn.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .fullscreen-btn:hover {
+            background-color: var(--accent-color);
+            transform: scale(1.1);
+            box-shadow: 0 0 12px rgba(255, 0, 0, 0.4);
+        }
+
+        .fullscreen-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
         }
     </style>
 </head>
@@ -114,11 +166,18 @@
         <button id="startBtn">Connect</button>
     </div>
 
-    <div class="viewer-container">
+    <div class="viewer-container" id="viewerContainer">
         <div class="placeholder-text" id="placeholder">
             No active stream.<br>Select your Vita above and click Connect.
         </div>
+        
         <video id="videoFeed" autoplay playsinline muted></video>
+        
+        <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle Fullscreen">
+            <svg viewBox="0 0 24 24">
+                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
+        </button>
     </div>
 
     <script>
@@ -126,12 +185,12 @@
         const videoSelect = document.getElementById('videoSource');
         const startButton = document.getElementById('startBtn');
         const placeholder = document.getElementById('placeholder');
+        
+        const viewerContainer = document.getElementById('viewerContainer');
+        const fullscreenButton = document.getElementById('fullscreenBtn');
 
-        // Request initial permission to get device labels, then list them
         async function getDevices() {
             try {
-                // Temporary stream request to force browser to ask for permission.
-                // Without this, device labels return as empty strings for privacy.
                 const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 tempStream.getTracks().forEach(track => track.stop());
 
@@ -142,7 +201,6 @@
                     if (device.kind === 'videoinput') {
                         const option = document.createElement('option');
                         option.value = device.deviceId;
-                        // Default to device label, fallback to generic name
                         option.text = device.label || `Camera ${videoSelect.length}`;
                         videoSelect.appendChild(option);
                     }
@@ -153,12 +211,10 @@
             }
         }
 
-        // Connect to the selected video source
         async function startStream() {
             const videoSource = videoSelect.value;
             if (!videoSource) return alert("Please select a device first.");
 
-            // Stop any existing stream before starting a new one
             if (window.stream) {
                 window.stream.getTracks().forEach(track => track.stop());
             }
@@ -166,7 +222,6 @@
             const constraints = {
                 video: {
                     deviceId: { exact: videoSource },
-                    // PS Vita UVC plugins usually output 60 FPS or 30 FPS at 960x544 or 1280x720
                     width: { ideal: 1280 },
                     height: { ideal: 720 },
                     frameRate: { ideal: 60 }
@@ -184,13 +239,32 @@
             }
         }
 
-        // Event Listeners
-        startButton.addEventListener('click', startStream);
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                viewerContainer.requestFullscreen()
+                    .catch(err => {
+                        alert(`Error trying to enable full-screen mode: ${err.message}`);
+                    });
+            } else {
+                document.exitFullscreen();
+            }
+        }
 
-        // Initialize on page load
+        function handleFullscreenChange() {
+            if (document.fullscreenElement) {
+                fullscreenButton.classList.add('hidden');
+            } else {
+                fullscreenButton.classList.remove('hidden');
+            }
+        }
+
+        startButton.addEventListener('click', startStream);
+        fullscreenButton.addEventListener('click', toggleFullscreen);
+        
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+
         getDevices();
 
-        // Listen for newly connected devices (e.g., if they plug the Vita in while page is open)
         navigator.mediaDevices.ondevicechange = getDevices;
     </script>
 </body>
